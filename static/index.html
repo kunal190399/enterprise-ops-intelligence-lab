@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Enterprise Operations Intelligence Lab</title>
+<style>
+:root{font-family:Inter,system-ui,Arial,sans-serif;color:#ecf2fa;background:#0b1221}*{box-sizing:border-box}
+body{max-width:1150px;margin:auto;padding:32px 24px}
+h1{font-size:clamp(28px,4vw,44px);margin:8px 0}h2{font-size:21px}
+.muted{color:#a6b6cc}.badge{display:inline-block;background:#203b62;color:#bfdeff;padding:8px 12px;border-radius:30px;font-size:12px;font-weight:700}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:15px;margin:26px 0}
+.card{background:#142238;border:1px solid #2b4058;border-radius:16px;padding:20px}
+.number{font-size:34px;font-weight:750;letter-spacing:-1px;margin:10px 0}
+.label{font-size:12px;color:#b8c8df;text-transform:uppercase;letter-spacing:1px}
+button{border:0;border-radius:9px;background:#58bda2;padding:10px 16px;cursor:pointer;font-weight:700}
+input{width:100%;padding:12px;border:1px solid #50627b;background:#0b192d;color:#fff;border-radius:9px}
+pre{white-space:pre-wrap;overflow:auto;font-size:13px;color:#c4d9ee}
+table{width:100%;border-collapse:collapse;font-size:14px}td,th{border-bottom:1px solid #2c4058;padding:10px;text-align:left}th{color:#a6b6cc}
+footer{margin-top:32px;color:#9cafc4;font-size:12px}
+</style></head><body>
+<span class="badge">SYNTHETIC DATA · LOCAL PORTFOLIO DEMO</span>
+<h1>Enterprise operations intelligence</h1>
+<p class="muted">Five-layer analytics prototype for a fictional telecom services business. Not a production deployment.</p>
+<div class="grid" id="metrics"></div>
+<div class="card"><h2>Customer insights</h2><p class="muted">Fanout-safe reporting aggregation over local SQLite data.</p><div style="overflow:auto"><table><thead><tr><th>Customer</th><th>Segment</th><th>Tickets</th><th>Open</th><th>SLA breaches</th><th>Paid GBP</th></tr></thead><tbody id="customers"></tbody></table></div></div>
+<div class="grid"><div class="card"><h2>Review-only automation</h2><p class="muted">Creates local idempotent alert candidates without external actions.</p><button id="alertsButton">Generate review alerts</button><pre id="alertsOutput">Not run yet</pre></div>
+<div class="card"><h2>Knowledge retrieval</h2><p class="muted">Offline source-cited search; not a live LLM answer.</p>
+<input id="question" value="How are SLA breaches defined?" aria-label="Business question"><p><button id="askButton">Retrieve evidence</button></p><pre id="answerOutput">Not run yet</pre></div></div>
+<footer>All displayed metrics are generated from deterministic fictional data. Snapshot 2026-10-25. API docs: <a href="/docs" style="color:#9ce2d4">/docs</a></footer>
+<script>
+const money=x=>new Intl.NumberFormat('en-GB',{style:'currency',currency:'GBP'}).format(x);
+const fmt=x=>new Intl.NumberFormat('en-GB').format(x);
+async function request(path,options){const response=await fetch(path,options);if(!response.ok)throw Error(response.status+' '+await response.text());return response.json()}
+async function load(){
+try{
+const k=await request('/api/kpis');
+const cards=[['Customers',fmt(k.customers)],['Service tickets',fmt(k.tickets)],['Open tickets',fmt(k.open_tickets)],['SLA breaches',fmt(k.sla_breaches)],['Paid invoices',money(k.paid_revenue_gbp)],['Unpaid balance',money(k.unpaid_balance_gbp)],['Rejected test records',fmt(k.quarantined_records)]];
+document.getElementById('metrics').innerHTML=cards.map(([label,value])=>'<div class="card"><div class="label">'+label+'</div><div class="number">'+value+'</div></div>').join('');
+const customers=await request('/api/customers');
+const tb=document.getElementById('customers');
+customers.slice(0,15).forEach(c=>{let tr=document.createElement('tr');[c.customer_id,c.segment,c.ticket_count,c.open_tickets,c.sla_breaches,money(c.paid_revenue_gbp)].forEach(v=>{let td=document.createElement('td');td.textContent=v;tr.appendChild(td)});tb.appendChild(tr)});
+}catch(e){document.getElementById('metrics').textContent='Run python -m opsintel.cli build first: '+e.message}}
+document.getElementById('alertsButton').onclick=async()=>{try{let a=await request('/api/alerts',{method:'POST'});document.getElementById('alertsOutput').textContent=a.length+' review-only alerts\n'+JSON.stringify(a.slice(0,3),null,2)}catch(e){document.getElementById('alertsOutput').textContent=e.message}};
+document.getElementById('askButton').onclick=async()=>{try{let a=await request('/api/ask',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:document.getElementById('question').value,use_llm:false})});document.getElementById('answerOutput').textContent=JSON.stringify(a,null,2)}catch(e){document.getElementById('answerOutput').textContent=e.message}};
+load();
+</script></body></html>
