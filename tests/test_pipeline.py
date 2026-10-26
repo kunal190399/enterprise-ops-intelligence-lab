@@ -8,8 +8,6 @@ def demo_db(tmp_path):
     return tmp_path / 'test.db'
 
 def test_ingestion_quarantines_invalid_source_rows(demo_db):
-    from scripts.generate_synthetic import generate
-    generate()
     counts = ingest(db_path=demo_db)
     assert counts == {'customers':{'accepted':30,'quarantined':1}, 'tickets':{'accepted':300,'quarantined':1}, 'invoices':{'accepted':240,'quarantined':1}}
     with connect(demo_db) as c:
